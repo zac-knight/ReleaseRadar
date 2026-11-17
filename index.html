@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0a">
+  <title>Release Radar AU</title>
+  <meta name="description" content="What's showing in Australian cinemas, and what's heading to Netflix, Prime Video, Disney+, Stan, Binge and more.">
+  <link rel="preconnect" href="https://image.tmdb.org" crossorigin>
+  <link rel="preconnect" href="https://api.themoviedb.org" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Limelight&family=Creepster&family=Mountains+of+Christmas:wght@700&family=Fredoka:wght@500;600&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/retro.css">
+  <link rel="stylesheet" href="css/seasons.css">
+  <link rel="stylesheet" href="css/mobile.css">
+</head>
+<body data-mode="cinema" data-view="grid" data-guide="off">
+  <div class="orbs" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i></div>
+
+  <div id="progress" class="progress" role="progressbar" aria-label="Loading" hidden><i></i></div>
+
+  <a class="skip" href="#results">Skip to results</a>
+  <header class="top">
+    <div class="wrap top-inner">
+      <h1><a href="./" id="home-link" class="home-link" title="Back to the start"><span class="logo" aria-hidden="true"></span><span class="wordmark">Release Radar</span><span class="au">AU</span></a></h1>
+      <label class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="Search a title, or describe a mood and press Enter ✦" autocomplete="off" spellcheck="false">
+      </label>
+      <span id="sync" class="sync" hidden><i></i><span>Updating</span></span>
+      <div class="top-actions">
+        <button id="night-btn" class="btn" title="Pick a film the whole group will enjoy">Movie Night</button>
+        <button id="lab-btn" class="btn lab-btn" title="See the AI, machine learning and data science in this app"><span>✦</span> AI Lab</button>
+        <details id="more" class="more">
+          <summary class="btn" aria-label="More options" title="Region, refresh and help">⋯</summary>
+          <div class="more-menu" role="menu">
+            <div class="season-pick" role="group" aria-label="Seasonal theme">
+              <span class="sp-label">Theme</span>
+              <button type="button" data-season="" aria-pressed="true">Classic</button>
+              <button type="button" data-season="christmas" aria-pressed="false">🎄 Christmas</button>
+              <button type="button" data-season="halloween" aria-pressed="false">🎃 Halloween</button>
+              <button type="button" data-season="easter" aria-pressed="false">🐣 Easter</button>
+            </div>
+            <button id="fx-btn" type="button" role="menuitem" title="Falling snow, bats, petals and other seasonal motion">✨ Seasonal animations: on</button>
+            <button id="region-btn" type="button" role="menuitem" title="Change region"></button>
+            <button id="refresh" type="button" role="menuitem" title="Discard cached data and refetch">Refresh data</button>
+            <button id="help-btn" type="button" role="menuitem" title="Keyboard shortcuts and tips (press ?)">Help and shortcuts</button>
+          </div>
+        </details>
+        <button id="settings-btn" class="btn">Settings</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- First run / "Start over": the guided questions -->
+  <section id="wizard" class="wizard wrap" aria-live="polite"></section>
+
+  <!-- Afterwards: the story sentence (click any highlighted phrase to change it) + a collapsible Refine panel -->
+  <div id="stickwrap" class="stickwrap">
+    <div class="wrap">
+      <div class="storybar">
+        <div id="sentence" class="sentence" aria-label="Current search"></div>
+        <p id="status" class="notice" role="status"></p>
+        <div class="story-actions">
+          <div id="view-seg" class="mini-seg view-seg" role="group" aria-label="Layout">
+            <button data-value="grid" aria-pressed="true">▦ Grid</button>
+            <button data-value="calendar" aria-pressed="false">▤ Calendar</button>
+            <button data-value="insights" aria-pressed="false">◔ Insights</button>
+          </div>
+          <button id="watch-btn" class="btn" aria-pressed="false" title="Show only my watchlist"><span>Watchlist</span></button>
+          <button id="refine-btn" class="btn" aria-expanded="false" aria-controls="refine">Refine <b id="refine-badge" hidden></b> <span class="chev" aria-hidden="true"></span></button>
+          <button id="restart-btn" class="btn" title="Answer the questions again">Start over</button>
+        </div>
+      </div>
+    <div id="activebar" class="activebar" hidden>
+      <span class="k">Filters</span>
+      <div id="active" class="active-chips"></div>
+      <button id="reset" class="linkbtn">Clear all</button>
+    </div>
+      <div id="refine" class="refine" hidden>
+        <div id="filterbar" class="filterbar" role="toolbar" aria-label="Refine"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="season-banner" class="season-banner" hidden></div>
+
+  <div id="results" class="wrap">
+    <nav id="jump" class="jump" aria-label="Jump to section"></nav>
+    <main>
+      <div id="timeline"></div>
+      <aside id="peek" class="peek" aria-label="Selected title" aria-live="polite"></aside>
+      <div id="sentinel" class="sentinel" aria-live="polite"></div>
+    </main>
+  </div>
+
+  <button id="to-top" class="to-top" aria-label="Back to top" hidden>Top</button>
+  <dialog id="detail" aria-label="Title details"></dialog>
+  <div id="busy" class="busy" hidden role="status" aria-live="polite">
+    <div class="busy-card">
+      <div class="busy-spin" aria-hidden="true"></div>
+      <b id="busy-title"></b>
+      <p id="busy-msg"></p>
+      <div class="busy-bar" aria-hidden="true"><i></i></div>
+      <button id="busy-cancel" class="btn" type="button" hidden>Cancel</button>
+    </div>
+  </div>
+  <dialog id="lab" class="lab" aria-label="AI Lab"></dialog>
+  <dialog id="night" class="night" aria-label="Movie Night"></dialog>
+  <dialog id="help" class="help" aria-label="Keyboard shortcuts and tips"></dialog>
+  <!-- Phone-only tab bar (CSS hides it on larger screens) -->
+  <nav id="bnav" class="bnav" aria-label="Main">
+    <button type="button" data-view="grid"><i aria-hidden="true">▦</i><span>Browse</span></button>
+    <button type="button" data-view="calendar"><i aria-hidden="true">▤</i><span>Calendar</span></button>
+    <button type="button" data-view="insights"><i aria-hidden="true">◔</i><span>Insights</span></button>
+    <button type="button" data-act="night"><i aria-hidden="true">♥</i><span>Movie Night</span></button>
+    <button type="button" data-act="lab"><i aria-hidden="true">✦</i><span>AI Lab</span></button>
+  </nav>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="step-dialog" class="step-dialog" aria-label="Change your search"></dialog>
+
+  <dialog id="settings">
+    <form method="dialog" id="settings-form">
+      <h2>Settings</h2>
+      <label>TMDB API key or read access token
+        <input id="key-input" type="password" autocomplete="off" placeholder="v3 API key or v4 token">
+      </label>
+      <p class="hint">Free from <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org</a>.
+        It is stored only in this browser and sent only to TMDB.</p>
+      <label>Region
+        <select id="region-input"></select>
+      </label>
+      <p class="hint">Cinema dates, classifications and streaming availability follow this region. Australia is the default.</p>
+      <menu>
+        <button value="cancel" class="btn">Cancel</button>
+        <button value="save" class="btn primary" id="settings-save">Save</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <footer class="wrap foot">
+    <span id="demo-note" hidden><b>Demo mode:</b> every title shown is fictional. For real titles, add your own free TMDB key in Settings. </span>
+    Release dates are Australian dates from TMDB and can change. This product uses the TMDB API but is not endorsed or certified by TMDB.
+  </footer>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
