@@ -1,0 +1,9 @@
+name = "rr-proxy"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+# Sites allowed to call the proxy (comma-separated). Add your own domain if you have one.
+ALLOWED_ORIGINS = "https://zac-knight.github.io,http://localhost:5173"
+
+# The key itself is NOT stored here. Add it as a secret:  npx wrangler secret put TMDB_API_KEY

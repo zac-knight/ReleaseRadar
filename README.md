@@ -322,6 +322,10 @@ Add `?demo` for fictional titles with no key. The screenshot script drives it wi
 
 It's a static site: GitHub Pages, Netlify, Cloudflare Pages or any file host works; publish the repo root. Static hosts don't run `serve.py`, so there's no `.env` there: each visitor pastes their *own* free TMDB key into Settings, and it never leaves their browser. (A shared key would be visible to anyone, so don't ship one.) The service worker serves cached app files first and updates in the background, so a new deploy appears on the *second* load.
 
+### Keeping your API key secret (Cloudflare Worker)
+
+Anything a browser sends can be read, so a key can't live in a static site. Instead, deploy the small proxy in [`worker/`](worker/): the site calls the Worker with no key, and the Worker adds your key (stored as an encrypted Cloudflare secret), forwards to TMDB, and caches responses at the edge. Set its URL as `PROXY_URL` in [`js/config.js`](js/config.js) and visitors get live data with no key of their own. Safeguards: GET only, a TMDB path allowlist, an origin allowlist and caching; add a Cloudflare rate-limiting rule too. Setup: [`worker/README.md`](worker/README.md). With no proxy and no key, the app opens in demo mode.
+
 ## Privacy
 
 No analytics, no tracking, no backend. Your key, region, filters, watchlist, season, and cached data live in your browser (`localStorage` and IndexedDB); clearing site data resets everything. Embeddings and your taste profile never leave the device. Trailers use `youtube-nocookie`, and only load when you press play. `.env` is git-ignored.

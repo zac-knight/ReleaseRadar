@@ -19,6 +19,7 @@ import { createLab } from './lab.js';
 import { createNight } from './night.js';
 import { SEASONS, SEASON_IDS, seasonFor } from './seasons.js';
 import { createFx } from './fx.js';
+import { PROXY_URL } from './config.js';
 import { embedTexts, entryText } from './semantic.js';
 import { centroid, rank, calibrate } from './vec.js';
 import { createDetail } from './detail.js';
@@ -207,8 +208,8 @@ async function ensure(m) {
     fillDemo(m); render({ reveal: true }); return;
   }
   const key = store.get('rr:key', '') || envKey;
-  if (!key) { setNotice('Add your free TMDB API key in Settings to get started.'); openSettings(); return; }
-  setApiKey(key);
+  if (!key && !PROXY_URL) { setNotice('Add your free TMDB API key in Settings to get started.'); openSettings(); return; }
+  setApiKey(key); // empty is fine when a proxy supplies the key
   hydrate(m);
   const todo = neededTasks(m).filter((t) => !state.done.has(doneKey(m, t)));
   render({ reveal: true }); // instant paint from the snapshot, if any
@@ -1255,7 +1256,7 @@ let envKey = '';
 try { envKey = ((await (await fetch('config.json', { cache: 'no-store' })).json()).tmdbKey || '').trim(); } catch { /* no server config */ }
 // No key anywhere (typical on a static host such as GitHub Pages): open the demo instead of an empty page.
 // `?nodemo` skips this, e.g. to see the first-run "add your key" prompt.
-if (!DEMO && !envKey && !store.get('rr:key', '') && !PARAMS.has('nodemo')) {
+if (!DEMO && !envKey && !PROXY_URL && !store.get('rr:key', '') && !PARAMS.has('nodemo')) {
   location.replace(`${location.pathname}?demo`);
   await new Promise(() => {}); // stop here while the browser navigates
 }

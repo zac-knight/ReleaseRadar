@@ -1,7 +1,12 @@
 // Thin TMDB client: auth, rate-limit-friendly concurrency, retry on 429,
 // pagination, and a localStorage cache with TTLs.
 
+import { PROXY_URL } from './config.js';
+
 const BASE = 'https://api.themoviedb.org/3';
+// With no personal key but a configured proxy (js/config.js), requests go through the Cloudflare Worker,
+// which adds the secret key. Nothing secret ever reaches the browser.
+const PROXY_BASE = PROXY_URL ? `${PROXY_URL.replace(/\/+$/, '')}/3` : '';
 export const IMG = 'https://image.tmdb.org/t/p/w342';
 const CACHE_PREFIX = 'rr:cache3:';
 const MAX_CONCURRENT = 12;
@@ -65,9 +70,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export class AuthError extends Error {}
 
 async function fetchJson(path, params) {
-  const url = new URL(BASE + path);
+  const viaProxy = !apiKey && !!PROXY_BASE;
+  const url = new URL((viaProxy ? PROXY_BASE : BASE) + path);
   const headers = { accept: 'application/json' };
-  if (apiKey.startsWith('eyJ')) headers.authorization = `Bearer ${apiKey}`; // v4 token
+  if (viaProxy) { /* the Worker adds the key */ }
+  else if (apiKey.startsWith('eyJ')) headers.authorization = `Bearer ${apiKey}`; // v4 token
   else url.searchParams.set('api_key', apiKey);
   url.searchParams.set('language', 'en-AU'); // Australian titles/synopses where TMDB has them
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
