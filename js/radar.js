@@ -33,7 +33,6 @@ function candidate(raw, type) {
     title: raw.title || raw.name,
     date: raw.release_date || raw.first_air_date,
     poster: raw.poster_path,
-    backdrop: raw.backdrop_path,
     overview: raw.overview,
     popularity: raw.popularity,
     lang: raw.original_language,
@@ -125,23 +124,14 @@ const settleAll = async (jobs) => {
  * Movies with a theatrical (wide or limited) release in `region`, from ~5 weeks ago (still playing)
  * to 18 months out, most popular first. Dates are the regional cinema dates, not the global ones.
  */
-/** TMDB keyword ids for a season's keyword names (looked up, then cached for a week by the TMDB client). */
-export async function seasonKeywordIds(names) {
-  const found = await Promise.all(names.map((q) => get('/search/keyword', { query: q }, TTL.search).then((r) => {
-    const hits = r.results || [];
-    return (hits.find((k) => k.name?.toLowerCase() === q.toLowerCase()) || hits[0])?.id;
-  }).catch(() => undefined)));
-  return [...new Set(found.filter(Boolean))];
-}
-
-export async function loadCinema({ region = 'US', now = new Date(), extra = {}, onEntry = () => {}, onProgress = () => {} } = {}) {
+export async function loadCinema({ region = 'US', now = new Date(), onEntry = () => {}, onProgress = () => {} } = {}) {
   const today = ymd(now);
   const from = addDays(today, -35);
   const to = ymd(new Date(now.getFullYear(), now.getMonth() + 18, now.getDate()));
   await ensureGenres();
   const [list] = await settleAll([getAllPages('/discover/movie', {
     region, with_release_type: '2|3', 'release_date.gte': from, 'release_date.lte': to,
-    sort_by: 'popularity.desc', include_adult: false, ...extra,
+    sort_by: 'popularity.desc', include_adult: false,
   }, { maxPages: 10 })]);
   const candidates = list.map((r) => candidate(r, 'movie')).filter((c) => c.title);
   const out = [];
@@ -159,7 +149,7 @@ export async function loadCinema({ region = 'US', now = new Date(), extra = {}, 
  * Calls onBatch(taskId, entries) per task. Tasks: 'movies' (cinema titles reaching digital/streaming in
  * the next ~4 months) and one per service id (that service's own new series and new seasons).
  */
-export async function loadSoon({ region = 'US', now = new Date(), tasks, extra = {}, onBatch = () => {} }) {
+export async function loadSoon({ region = 'US', now = new Date(), tasks, onBatch = () => {} }) {
   const today = ymd(now);
   const horizon = ymd(new Date(now.getFullYear(), now.getMonth() + 12, now.getDate()));
   await ensureGenres();
@@ -170,7 +160,7 @@ export async function loadSoon({ region = 'US', now = new Date(), tasks, extra =
       const to = addDays(today, 120);
       const rs = await getAllPages('/discover/movie', {
         region, with_release_type: '4', 'release_date.gte': today, 'release_date.lte': to,
-        sort_by: 'popularity.desc', include_adult: false, ...extra,
+        sort_by: 'popularity.desc', include_adult: false,
       }, { maxPages: 4 });
       const found = await Promise.all(rs.map((r) => enrichMovie(candidate(r, 'movie'), region, (d) => d.digital, [today, to])));
       entries = found.filter(Boolean).map((e) => ({ ...e, label: 'Digital release' }));
@@ -178,8 +168,8 @@ export async function loadSoon({ region = 'US', now = new Date(), tasks, extra =
       const svc = SERVICES.find((s) => s.id === id);
       const nets = svc.networks.join('|');
       const lists = await settleAll([
-        getAllPages('/discover/tv', { with_networks: nets, 'first_air_date.gte': today, 'first_air_date.lte': horizon, sort_by: 'popularity.desc', ...extra }, { maxPages: 1 }),
-        getAllPages('/discover/tv', { with_networks: nets, 'air_date.gte': today, 'air_date.lte': horizon, sort_by: 'popularity.desc', ...extra }, { maxPages: 1 }),
+        getAllPages('/discover/tv', { with_networks: nets, 'first_air_date.gte': today, 'first_air_date.lte': horizon, sort_by: 'popularity.desc' }, { maxPages: 1 }),
+        getAllPages('/discover/tv', { with_networks: nets, 'air_date.gte': today, 'air_date.lte': horizon, sort_by: 'popularity.desc' }, { maxPages: 1 }),
       ]);
       const cands = mergeCandidates(...lists.map((l) => l.map((r) => candidate(r, 'tv')))).filter((c) => c.title);
       const found = await Promise.all(cands.map((c) => enrichTv(c, region, today)));
@@ -209,7 +199,7 @@ async function providerIds(region) {
  * Calls onBatch(serviceId, entries) as each service finishes.
  * Resolves to { missing } listing services TMDB doesn't know in that region.
  */
-export async function loadAvailable({ region = 'US', services, now = new Date(), extra = {}, onBatch = () => {} }) {
+export async function loadAvailable({ region = 'US', services, now = new Date(), onBatch = () => {} }) {
   const today = ymd(now);
   const [ids] = await Promise.all([providerIds(region), ensureGenres()]);
   const missing = [];
@@ -221,7 +211,7 @@ export async function loadAvailable({ region = 'US', services, now = new Date(),
     const queries = ['movie', 'tv'].map((type) => getAllPages(`/discover/${type}`, {
       with_watch_providers: pids.join('|'), watch_region: region,
       with_watch_monetization_types: 'flatrate|free|ads', sort_by: 'popularity.desc', include_adult: false,
-      [type === 'movie' ? 'primary_release_date.lte' : 'first_air_date.lte']: today, ...extra,
+      [type === 'movie' ? 'primary_release_date.lte' : 'first_air_date.lte']: today,
     }, { maxPages: 3 }).then((rs) => rs.map((r) => ({
       ...candidate(r, type), status: 'available', services: [sid], providers: [label],
       rating: r.vote_average > 0 ? r.vote_average : undefined }))));
@@ -240,57 +230,33 @@ export async function loadAvailable({ region = 'US', services, now = new Date(),
 // ---- rich detail (on demand) ---------------------------------------------------------------
 const slimRich = (region) => (d) => {
   const wp = d['watch/providers']?.results?.[region];
-  const prov = (l) => (l || []).map((x) => ({ name: x.provider_name, logo: x.logo_path }));
+  const names = (l) => (l || []).map((x) => x.provider_name);
   const videos = (d.videos?.results || []).filter((v) => v.site === 'YouTube');
-  const rank = (v) => (v.type === 'Trailer' ? 0 : v.type === 'Teaser' ? 1 : 2) + (v.official ? 0 : 0.5);
-  const sorted = [...videos].sort((a, b) => rank(a) - rank(b));
-  const trailer = sorted[0];
+  const trailer = videos.find((v) => v.type === 'Trailer' && v.official) || videos.find((v) => v.type === 'Trailer') || videos[0];
   const crew = d.credits?.crew || [];
-  const people = (jobs, n = 3) => [...new Set(crew.filter((c) => jobs.includes(c.job)).map((c) => c.name))].slice(0, n);
-  const ext = d.external_ids || {};
-  const kw = d.keywords?.keywords || d.keywords?.results || [];
-  const title = (r) => r.title || r.name;
   return {
     tagline: d.tagline, status: d.status, homepage: d.homepage,
-    backdrop: d.backdrop_path || d.images?.backdrops?.[0]?.file_path,
     runtime: d.runtime || d.episode_run_time?.[0],
     rating: d.vote_count > 0 ? d.vote_average : undefined, votes: d.vote_count,
     seasons: d.number_of_seasons, episodes: d.number_of_episodes,
     networks: (d.networks || []).map((n) => n.name),
     creators: (d.created_by || []).map((c) => c.name),
-    directors: people(['Director']),
-    crew: [['Director', people(['Director'])], ['Writing', people(['Screenplay', 'Writer', 'Story'], 4)], ['Producer', people(['Producer'], 3)],
-      ['Music', people(['Original Music Composer', 'Music'], 2)], ['Cinematography', people(['Director of Photography'], 2)]].filter(([, v]) => v.length),
-    cast: (d.credits?.cast || []).slice(0, 16).map((c) => ({ name: c.name, character: c.character, photo: c.profile_path })),
+    directors: crew.filter((c) => c.job === 'Director').map((c) => c.name).slice(0, 3),
+    cast: (d.credits?.cast || []).slice(0, 8).map((c) => ({ name: c.name, character: c.character })),
     trailer: trailer && { key: trailer.key, name: trailer.name },
-    videos: sorted.slice(0, 12).map((v) => ({ key: v.key, name: v.name, type: v.type })),
-    backdrops: (d.images?.backdrops || []).slice(0, 12).map((i) => i.file_path),
-    posters: (d.images?.posters || []).slice(0, 8).map((i) => i.file_path),
-    keywords: kw.slice(0, 14).map((k) => k.name),
-    reviews: (d.reviews?.results || []).slice(0, 4).map((r) => ({
-      author: r.author, rating: r.author_details?.rating, avatar: r.author_details?.avatar_path,
-      date: r.created_at, url: r.url, text: (r.content || '').replace(/\s+/g, ' ').slice(0, 520) })),
-    similar: (d.recommendations?.results?.length ? d.recommendations.results : d.similar?.results || []).filter((r) => r.poster_path).slice(0, 12).map((r) => ({
-      id: r.id, type: r.media_type || (d.title ? 'movie' : 'tv'), title: title(r), date: r.release_date || r.first_air_date,
-      poster: r.poster_path, overview: r.overview, rating: r.vote_average, lang: r.original_language })),
-    budget: d.budget || undefined, revenue: d.revenue || undefined,
-    language: d.original_language, spoken: (d.spoken_languages || []).map((l) => l.english_name).slice(0, 3),
-    companies: (d.production_companies || []).map((c) => c.name).slice(0, 3),
-    collection: d.belongs_to_collection && { name: d.belongs_to_collection.name },
-    links: { imdb: ext.imdb_id, instagram: ext.instagram_id, twitter: ext.twitter_id, facebook: ext.facebook_id, homepage: d.homepage },
     releases: d.release_dates?.results?.filter((x) => x.iso_3166_1 === region).map((x) => ({
       iso_3166_1: x.iso_3166_1,
       release_dates: x.release_dates.map((rd) => ({ type: rd.type, release_date: rd.release_date, certification: rd.certification, note: rd.note })) })) || [],
     tvRating: d.content_ratings?.results?.find((x) => x.iso_3166_1 === region)?.rating,
-    watch: wp && { link: wp.link, stream: prov(wp.flatrate), free: prov([...(wp.free || []), ...(wp.ads || [])]), rent: prov(wp.rent), buy: prov(wp.buy) },
+    watch: wp && { link: wp.link, stream: names(wp.flatrate), free: names([...(wp.free || []), ...(wp.ads || [])]), rent: names(wp.rent), buy: names(wp.buy) },
   };
 };
 
 export async function loadDetail(e, region = 'US') {
   const append = e.type === 'movie'
-    ? 'credits,videos,images,keywords,reviews,recommendations,external_ids,release_dates,watch/providers'
-    : 'credits,videos,images,keywords,reviews,recommendations,external_ids,content_ratings,watch/providers';
-  const d = await get(`/${e.type}/${e.id}`, { append_to_response: append, include_image_language: 'en,null' }, TTL.detail, slimRich(region));
+    ? 'credits,videos,release_dates,watch/providers'
+    : 'credits,videos,content_ratings,watch/providers';
+  const d = await get(`/${e.type}/${e.id}`, { append_to_response: append }, TTL.detail, slimRich(region));
   const info = releaseInfo(d.releases, region);
   return { ...d, dates: info.dates, cert: info.cert || d.tvRating };
 }

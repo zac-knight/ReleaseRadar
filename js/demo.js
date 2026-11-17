@@ -1,4 +1,3 @@
-import { SEASONS } from './seasons.js';
 // Demo mode (?demo): a deterministic set of FICTIONAL titles so the UI can be explored, tested and
 // screenshotted without a TMDB key. Nothing here is real release data.
 
@@ -21,8 +20,8 @@ const NOUN = ['Meridian', 'Lighthouse', 'Orchard', 'Protocol', 'Harvest', 'Signa
 const FORMS = ['{A} {N}', 'The {A} {N}', '{N} of the {A}', 'Project {N}', '{A} {N}: Origins', 'Return to {N}', 'The {N} Files'];
 const GENRES = ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Drama', 'Family', 'Fantasy', 'Horror',
   'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'Documentary'];
-const PALETTES = [['#8a1006', '#2a0305'], ['#e0a83a', '#4a0000'], ['#c8202f', '#1a0204'], ['#e8b05c', '#5a0a0a'],
-  ['#a3150a', '#0a0a0a'], ['#d99a2b', '#3a0606'], ['#7a0c0c', '#0a0a0a'], ['#b8742a', '#2a0505']];
+const PALETTES = [['#ff4b55', '#5b2bd9'], ['#1d6bff', '#0b1f55'], ['#f5b550', '#a1262e'], ['#22c3a6', '#0b3a5c'],
+  ['#ff7ac6', '#3b1d7a'], ['#8b7cf6', '#10102a'], ['#ff9a3d', '#5a1235'], ['#4cd38f', '#0d2b3a']];
 const LANGS = ['en', 'en', 'en', 'en', 'en', 'en', 'ja', 'ko', 'fr', 'es'];
 const CERTS = ['G', 'PG', 'PG', 'M', 'M', 'M', 'MA15+', 'MA15+', 'R18+'];
 const BITS = ['A reluctant hero', 'A rookie detective', 'Two estranged siblings', 'A retired pilot', 'A small-town doctor',
@@ -50,23 +49,22 @@ function poster(title, [c1, c2], r) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-function makeTitles(n, seed, idBase, { movies = 0.62, season = '' } = {}) {
-  const S = season ? SEASONS[season] : null;
+function makeTitles(n, seed, idBase, { movies = 0.62 } = {}) {
   const r = seeded(seed);
   const pick = (a) => a[Math.floor(r() * a.length)];
   const seen = new Set();
   const out = [];
   while (out.length < n) {
-    const title = pick(S ? S.demo.forms : FORMS).replace('{A}', pick(ADJ)).replace('{N}', pick(NOUN));
+    const title = pick(FORMS).replace('{A}', pick(ADJ)).replace('{N}', pick(NOUN));
     if (seen.has(title)) continue;
     seen.add(title);
     const type = r() < movies ? 'movie' : 'tv';
-    const gs = new Set(S ? [pick(S.demo.genres), pick(S.demo.genres)] : [pick(GENRES), pick(GENRES)]);
+    const gs = new Set([pick(GENRES), pick(GENRES)]);
     if (r() < 0.35) gs.add(pick(GENRES));
     out.push({
       key: `${type}:${idBase + out.length}`, id: idBase + out.length, type, title,
       poster: poster(title, pick(PALETTES), r),
-      overview: S ? `${pick(BITS)} in ${S.label} season: ${S.demo.plot}. (Fictional demo title.)` : `${pick(BITS)} ${pick(PLOTS)}. (Fictional demo title.)`,
+      overview: `${pick(BITS)} ${pick(PLOTS)}. (Fictional demo title.)`,
       tagline: r() < 0.5 ? 'Nothing stays buried.' : undefined,
       popularity: Math.round(r() * 1000) / 10, lang: pick(LANGS), genres: [...gs], providers: [], label: '',
       ...(type === 'movie' ? { runtime: 82 + Math.floor(r() * 85), cert: pick(CERTS) } : {}),
@@ -83,8 +81,8 @@ const thursdayOnOrAfter = (date) => {
   return ymd(dt);
 };
 
-export function demoCinema(now = new Date(), season = '') {
-  const { out, r } = makeTitles(season ? 40 : 96, 7, 9000, { movies: 1, season });
+export function demoCinema(now = new Date()) {
+  const { out, r } = makeTitles(96, 7, 9000, { movies: 1 });
   const today = ymd(now);
   return out.map((e) => {
     const roll = r();
@@ -100,8 +98,8 @@ export function demoCinema(now = new Date(), season = '') {
   });
 }
 
-export function demoSoon(now = new Date(), season = '') {
-  const { out, r, pick } = makeTitles(season ? 40 : 84, 13, 7000, { movies: 0.45, season });
+export function demoSoon(now = new Date()) {
+  const { out, r, pick } = makeTitles(84, 13, 7000, { movies: 0.45 });
   const today = ymd(now);
   return out.map((e) => {
     const date = addDays(today, 2 + Math.floor(r() * 300));
@@ -117,8 +115,8 @@ export function demoSoon(now = new Date(), season = '') {
   });
 }
 
-export function demoNow(now = new Date(), season = '') {
-  const { out, r } = makeTitles(season ? 60 : 150, 21, 5000, { season });
+export function demoNow(now = new Date()) {
+  const { out, r } = makeTitles(150, 21, 5000);
   const entries = [];
   for (const e of out) {
     const first = SERVICES[Math.floor(r() * SERVICES.length)];
@@ -133,32 +131,18 @@ export function demoNow(now = new Date(), season = '') {
 }
 
 /** Fake "rich detail" matching what loadDetail() returns for real titles. */
-export function demoDetail(e, pool = []) {
+export function demoDetail(e) {
   const r = seeded(e.id * 31 + 5);
   const name = () => `${FIRST[Math.floor(r() * FIRST.length)]} ${LAST[Math.floor(r() * LAST.length)]}`;
   const svc = (e.providers || []).filter(Boolean);
   return {
-    backdrop: e.poster, // demo: reuse the generated art so the hero has a picture
     tagline: e.tagline, runtime: e.runtime || (e.type === 'tv' ? 48 : undefined), cert: e.cert,
     rating: e.rating, votes: e.rating ? 1200 + Math.floor(r() * 9000) : undefined,
     seasons: e.type === 'tv' ? 1 + Math.floor(r() * 4) : undefined, episodes: e.type === 'tv' ? 8 + Math.floor(r() * 30) : undefined,
     directors: e.type === 'movie' ? [name()] : [], creators: e.type === 'tv' ? [name()] : [],
     cast: Array.from({ length: 6 }, () => ({ name: name(), character: 'Role (demo)' })),
-    // Demo only: Blender Foundation's freely licensed short film, standing in for a trailer.
-    videos: [{ key: 'aqz-KE-bpKQ', name: 'Demo video (Big Buck Bunny)', type: 'Trailer' }],
+    trailer: { key: 'dQw4w9WgXcQ', name: 'Demo trailer' },
     dates: e.dates || (e.type === 'tv' ? { tv: e.date } : { theatrical: e.date }),
-    status: e.status === 'available' || e.status === 'now_playing' ? 'Released' : 'In Production',
-    budget: e.type === 'movie' ? (40 + Math.floor(r() * 160)) * 1e6 : undefined,
-    revenue: e.status === 'now_playing' ? (80 + Math.floor(r() * 500)) * 1e6 : undefined,
-    keywords: ['demo data', 'fictional', 'sample', ...(e.genres || []).map((g) => g.toLowerCase())].slice(0, 8),
-    crew: e.type === 'movie' ? [['Director', [name()]], ['Writing', [name(), name()]], ['Music', [name()]]] : [],
-    companies: ['Fictional Pictures', 'Demo Studios'],
-    reviews: [
-      { author: 'demo_reviewer', rating: 8, date: '2026-10-01T00:00:00Z', text: 'A fictional review for demo mode. The pacing is confident, the score is memorable, and the second act is the standout. Worth a watch when it lands.' },
-      { author: 'cinephile42', rating: 6, date: '2026-09-18T00:00:00Z', text: 'Another invented opinion: ambitious and uneven, but the performances carry it through the slower stretches.' },
-    ],
-    similar: pool.filter((x) => x.key !== e.key && x.poster).slice(0, 12).map((x) => ({ id: x.id, type: x.type, title: x.title, date: x.date, poster: x.poster, overview: x.overview, rating: x.rating || 7.1 })),
-    links: { homepage: 'https://example.com' },
     networks: svc,
     watch: { link: '', stream: svc, free: [], rent: e.status === 'available' ? [] : [], buy: [] },
   };

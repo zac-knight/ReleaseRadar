@@ -107,7 +107,7 @@ test('orderBy', () => {
 });
 
 import {
-  releaseInfo, effectiveFilters, storySentence, calendarWeeks, addDays, certFacets, matchesRuntime, SERVICES,
+  releaseInfo, calendarWeeks, addDays, certFacets, matchesRuntime, SERVICES,
 } from '../js/model.js';
 import { buildICS, toCSV } from '../js/export.js';
 
@@ -209,34 +209,4 @@ test('multi-service and rating filters', () => {
   assert.deepEqual(keys({ services: ['netflix', 'stan'] }), ['a', 'b']);
   assert.deepEqual(keys({ minRating: 8 }), ['a', 'c']);
   assert.deepEqual(keys({ services: ['stan', 'disney'], minRating: 7 }), ['c']);
-});
-
-test('filters set in one view do not silently empty another', () => {
-  const stale = { mode: 'now', format: 'tv', status: 'now_playing', when: 'week', certs: ['M'], rtMin: 75, rtMax: 180,
-    services: [], watch: 'all', lang: 'all', genres: [], genreMode: 'any', minRating: 0 };
-  const tvCatalogue = e({ type: 'tv', status: 'available', date: '2015-04-01', runtime: undefined, cert: undefined });
-  // the leftover runtime range alone would hide a TV title that has no runtime...
-  assert.equal(applyFilters([tvCatalogue], stale, new Set()).length, 0);
-  // ...but it isn't a streaming-now control, so it must not apply there
-  assert.equal(applyFilters([tvCatalogue], effectiveFilters(stale), new Set()).length, 1);
-  const soon = effectiveFilters({ ...stale, mode: 'soon' });
-  assert.equal(soon.status, 'all'); // "in cinemas now" can't apply to streaming-soon titles
-  assert.equal(soon.rtMin, 75);     // runtime still applies to films in that view
-  const cinema = effectiveFilters({ ...stale, mode: 'cinema', services: ['netflix'] });
-  assert.deepEqual([cinema.format, cinema.services], ['all', []]);
-});
-
-test('storySentence reads as a sentence and marks editable parts', () => {
-  const text = (f, o) => storySentence(f, o).map((p) => p.text).join(' ');
-  const base = { mode: 'cinema', genres: [], genreMode: 'any', format: 'all', services: [], when: 'all' };
-  assert.equal(text(base), 'Showing all genres films in Australian cinemas at any time');
-  assert.equal(text({ ...base, genres: ['Action', 'Adventure'], when: 'month' }),
-    'Showing action or adventure films in Australian cinemas this month');
-  assert.equal(text({ ...base, mode: 'soon', genres: ['Sci-Fi', 'Fantasy'], genreMode: 'all', format: 'tv', services: ['stan'], when: '3m' },
-    { serviceLabel: (id) => ({ stan: 'Stan' })[id] }),
-  'Showing sci-fi and fantasy TV shows coming to streaming on Stan in the next 3 months');
-  assert.equal(text({ ...base, mode: 'now', services: ['netflix', 'stan', 'binge'] }, { serviceLabel: (id) => id }),
-    'Showing all genres movies and TV shows streaming now on netflix, stan or binge');
-  assert.deepEqual(storySentence({ ...base, mode: 'now' }).filter((p) => p.step).map((p) => p.step), ['genre', 'media', 'what', 'where']);
-  assert.deepEqual(storySentence(base).filter((p) => p.step).map((p) => p.step), ['genre', 'what', 'when']); // cinema is films-only
 });

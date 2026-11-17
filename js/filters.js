@@ -124,9 +124,9 @@ function defs({ patch, getF }) {
     input.addEventListener('input', () => patch({ minRating: Number(input.value) }));
     return {
       id: 'rating', label: 'Rating', modes: ['now'],
-      summary: (f) => (f.minRating ? `Rating ${f.minRating}+` : ''),
+      summary: (f) => (f.minRating ? `${f.minRating}+ ★` : ''),
       mount: (panel) => panel.append(el('div', { class: 'slider' }, out, input), el('p', { class: 'hint', text: 'TMDB user rating out of 10.' })),
-      update(ctx) { input.value = ctx.f.minRating; out.textContent = ctx.f.minRating ? `Rating ${ctx.f.minRating}+` : 'Any rating'; },
+      update(ctx) { input.value = ctx.f.minRating; out.textContent = ctx.f.minRating ? `${ctx.f.minRating}+ ★` : 'Any rating'; },
     };
   };
 
@@ -162,10 +162,10 @@ function defs({ patch, getF }) {
     };
   };
 
-  const simple = (id, text, modes, options, key, summarize, hide) => {
+  const simple = (id, text, modes, options, key, summarize) => {
     const r = radios(`dd-${id}`, options, (v) => patch({ [key]: v }));
     return { id, label: text, modes, summary: (f) => (f[key] === options[0][0] ? '' : summarize ? summarize(f) : label(options, f[key])),
-      mount: (panel) => panel.append(r.el), update: (ctx) => r.set(ctx.f[key], hide ? hide(ctx) : []) };
+      mount: (panel) => panel.append(r.el), update: (ctx) => r.set(ctx.f[key]) };
   };
 
   const cert = () => {
@@ -203,7 +203,7 @@ function defs({ patch, getF }) {
     simple('format', 'Format', ['soon', 'now'], FORMAT, 'format'),
     cert(),
     simple('lang', 'Language', ['cinema', 'soon', 'now'], LANG, 'lang'),
-    simple('status', 'Status', ['cinema', 'soon'], STATUS, 'status', null, (ctx) => (ctx.mode === 'soon' ? ['now_playing'] : [])),
+    simple('status', 'Status', ['cinema', 'soon'], STATUS, 'status'),
     sort()];
 }
 
@@ -212,12 +212,12 @@ function defs({ patch, getF }) {
  * @param {{ mount: HTMLElement, getF: () => object, patch: (p: object) => void,
  *           onExport: (kind: string) => void, onWatch: () => void }} api
  */
-export function createFilterBar({ mount, getF, patch, onExport, onWatch, exclude = [], showWatch = true }) {
+export function createFilterBar({ mount, getF, patch, onExport, onWatch }) {
   let openId = null;
   const items = defs({ patch, getF }).map((def) => {
     const val = el('b', { class: 'val' });
     const btn = el('button', { type: 'button', class: 'dd-btn', 'aria-haspopup': 'true', 'aria-expanded': 'false' },
-      el('span', { class: 'dd-lab', text: def.label }), val, el('span', { class: 'chev', 'aria-hidden': 'true', text: '▾' }));
+      el('span', { class: 'lab', text: def.label }), val, el('span', { class: 'chev', 'aria-hidden': 'true', text: '▾' }));
     const panel = el('div', { class: 'dd-panel', hidden: true, role: 'group', 'aria-label': def.label });
     const root = el('div', { class: `dd${def.alignRight ? ' right' : ''}`, 'data-dd': def.id }, btn, panel);
     def.mount(panel);
@@ -227,11 +227,11 @@ export function createFilterBar({ mount, getF, patch, onExport, onWatch, exclude
 
   // Export + watchlist live at the right end of the bar.
   const watch = el('button', { type: 'button', class: 'dd-btn icon', 'aria-pressed': 'false', title: 'Show only my watchlist' },
-    el('span', { class: 'dd-lab', text: 'Watchlist' }));
+    el('span', { class: 'star-ico', 'aria-hidden': 'true', text: '★' }), el('span', { class: 'lab', text: 'Watchlist' }));
   watch.addEventListener('click', onWatch);
   const exportItems = [['csv', 'Download this list (.csv)'], ['ics-view', 'Add this list to calendar (.ics)'], ['ics-watch', 'Add my watchlist to calendar (.ics)']];
   const exportBtn = el('button', { type: 'button', class: 'dd-btn icon', 'aria-haspopup': 'true', 'aria-expanded': 'false' },
-    el('span', { 'aria-hidden': 'true', text: '⤓' }), el('span', { class: 'dd-lab', text: 'Export' }));
+    el('span', { 'aria-hidden': 'true', text: '⤓' }), el('span', { class: 'lab', text: 'Export' }));
   const exportPanel = el('div', { class: 'dd-panel', hidden: true },
     el('div', { class: 'opts' }, ...exportItems.map(([k, t]) => {
       const b = el('button', { type: 'button', class: 'row action', text: t });
@@ -241,7 +241,7 @@ export function createFilterBar({ mount, getF, patch, onExport, onWatch, exclude
   const exportRoot = el('div', { class: 'dd right', 'data-dd': 'export' }, exportBtn, exportPanel);
   exportBtn.addEventListener('click', () => toggle('export'));
 
-  mount.replaceChildren(...items.map((i) => i.root), el('span', { class: 'grow' }), exportRoot, ...(showWatch ? [watch] : []));
+  mount.replaceChildren(...items.map((i) => i.root), el('span', { class: 'grow' }), exportRoot, watch);
 
   function all() { return [...items.map((i) => ({ id: i.def.id, btn: i.btn, panel: i.panel, root: i.root })), { id: 'export', btn: exportBtn, panel: exportPanel, root: exportRoot }]; }
   function close() {
@@ -269,7 +269,7 @@ export function createFilterBar({ mount, getF, patch, onExport, onWatch, exclude
     open: (id) => toggle(id),
     update(ctx) {
       for (const { def, btn, val, root } of items) {
-        const visible = def.modes.includes(ctx.mode) && !exclude.includes(def.id);
+        const visible = def.modes.includes(ctx.mode);
         root.hidden = !visible;
         if (!visible) continue;
         const v = def.summary(ctx.f);
@@ -284,21 +284,21 @@ export function createFilterBar({ mount, getF, patch, onExport, onWatch, exclude
 
 // ---- active-filter chips ----------------------------------------------------------------
 /** What is currently filtering the list, each with the patch that removes it. */
-export function activeChips(f, mode, { story = false } = {}) {
+export function activeChips(f, mode) {
   const chips = [];
-  if (!story) for (const g of f.genres) chips.push({ label: g, patch: { genres: f.genres.filter((x) => x !== g) } });
-  if (!story && mode !== 'cinema') for (const id of f.services) {
+  for (const g of f.genres) chips.push({ label: g, patch: { genres: f.genres.filter((x) => x !== g) } });
+  if (mode !== 'cinema') for (const id of f.services) {
     chips.push({ label: SERVICES.find((s) => s.id === id)?.label ?? id, patch: { services: f.services.filter((x) => x !== id) } });
   }
-  if (!story && mode !== 'cinema' && f.format !== 'all') chips.push({ label: label(FORMAT, f.format), patch: { format: 'all' } });
-  if (mode !== 'now' && f.when !== 'all' && (!story || f.when === 'custom')) {
+  if (mode !== 'cinema' && f.format !== 'all') chips.push({ label: label(FORMAT, f.format), patch: { format: 'all' } });
+  if (mode !== 'now' && f.when !== 'all') {
     chips.push({ label: f.when === 'custom' ? `${f.from || '…'} → ${f.to || '…'}` : WHEN_LABEL[f.when], patch: { when: 'all', from: '', to: '' } });
   }
   if (f.lang !== 'all') chips.push({ label: label(LANG, f.lang), patch: { lang: 'all' } });
   if (mode !== 'now' && f.status !== 'all') chips.push({ label: label(STATUS, f.status), patch: { status: 'all' } });
   if (mode !== 'now') for (const c of f.certs) chips.push({ label: c, patch: { certs: f.certs.filter((x) => x !== c) } });
   if (mode !== 'now' && (f.rtMin > 0 || f.rtMax < RUNTIME_MAX)) chips.push({ label: `${f.rtMin}–${f.rtMax >= RUNTIME_MAX ? `${RUNTIME_MAX}+` : f.rtMax} min`, patch: { rtMin: 0, rtMax: RUNTIME_MAX } });
-  if (mode === 'now' && f.minRating) chips.push({ label: `Rating ${f.minRating}+`, patch: { minRating: 0 } });
-  if (!story && f.watch === 'only') chips.push({ label: 'Watchlist', patch: { watch: 'all' } });
+  if (mode === 'now' && f.minRating) chips.push({ label: `${f.minRating}+ ★`, patch: { minRating: 0 } });
+  if (f.watch === 'only') chips.push({ label: '★ Watchlist', patch: { watch: 'all' } });
   return chips;
 }

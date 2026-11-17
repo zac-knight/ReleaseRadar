@@ -2,350 +2,232 @@
 
 # 🎬 Release Radar AU
 
-**What's in Australian cinemas, what's heading to streaming, and what's already on Netflix, Prime Video, Disney+, Stan, Binge, HBO Max and more.**
-One place, with Australian dates, an on-device AI that understands what you're in the mood for, and a group picker that ends the "what do we watch?" argument.
+**What's in Australian cinemas, and what's heading to Netflix, Prime Video, Disney+, Stan, Binge, HBO Max and more.**
+One calendar-accurate place instead of a dozen entertainment sites.
 
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 ![No build step](https://img.shields.io/badge/build-none-success)
 ![Vanilla JS](https://img.shields.io/badge/stack-vanilla%20JS%20%2B%20ES%20modules-f7df1e)
-![Tests](https://img.shields.io/badge/tests-45%20passing-brightgreen)
-![On-device ML](https://img.shields.io/badge/ML-runs%20in%20your%20browser-8a1006)
 ![Data](https://img.shields.io/badge/data-TMDB-01b4e4)
 
-![Release Radar: poster grid with a preview pane](docs/screenshots/cinemas.jpg)
-
-[**▶ Live demo**](https://zac-knight.github.io/ReleaseRadar/) · [Quick start](#quick-start) · [What makes it different](#what-makes-it-different) · [Screenshots](#screenshots) · [Features](#features) · [AI & data science](#ai-machine-learning--data-science) · [How it works](#how-it-works) · [Development](#development)
+![In cinemas view](docs/screenshots/cinemas.jpg)
 
 </div>
 
-> [!TIP]
-> **Try it now: <https://zac-knight.github.io/ReleaseRadar/>**. With no API key it opens in demo mode (fictional titles), so you can explore everything: the guided questions, AI Lab, Movie Night, Insights and the seasonal themes. Add your own free TMDB key in Settings for real data.
-
 > [!NOTE]
-> Every screenshot here was taken in **demo mode** (`?demo`), which uses *fictional* titles so the app can be explored and photographed without an API key. None of it is real release data.
+> Every screenshot in this README is taken in **demo mode** (`?demo`), which uses *fictional* titles so the app can be explored, tested and photographed without an API key. Nothing in them is real release data.
 
 ---
+
+## Project status
+
+| Area | State |
+|---|---|
+| Interface (all three views, filters, calendar, detail panel, exports, responsive layout) | Built and checked in a real browser through **demo mode** |
+| Pure logic (filters, status/delay inference, date ranges, release-type parsing, calendar grid, `.ics`/CSV) | Unit-tested (`npm test`) |
+| TMDB integration (`radar.js`, `tmdb.js`) | Written against TMDB's documented v3 API, with network IDs taken from TMDB's public export. **Not yet exercised end-to-end against live TMDB data in development**, so expect to tune field handling once you run it with a real key. Please open an issue with the console output if something looks off |
 
 ## Why this exists
 
-Studios announce release dates years ahead, then move them. Cinema openings differ by country. Streaming services rarely say when something is being added. And US-centric sites barely register the services Australians actually use (Stan, Binge, ABC iview), or show American dates.
+Studios announce release dates years ahead, then move them. Cinema openings differ by country. Streaming platforms rarely say when something is being added. The information exists, but it's scattered across dozens of ad-heavy sites, and nobody gathers it for **Australian** viewers (where films open on Thursdays, the classification system is G / PG / M / MA15+ / R18+, and half the platforms you actually use, such as Stan, Binge and ABC iview, barely register on US-centric sites).
 
-Release Radar doesn't greet you with a wall of filters. It **asks a few questions** and shows exactly that:
+Release Radar pulls it into three views that answer the three questions people really ask:
 
-1. **What are you looking for?** Coming to **cinemas**, coming to **streaming**, or what's on streaming **now**
-2. **Movies, TV shows, or both?**
-3. **What kind of story?** Pick any genres, with live counts and example films for each
-4. **Where do you watch?** Netflix, Prime Video, Disney+, Stan, Binge, HBO Max, Apple TV+, Paramount+, Free TV
-5. **When?** This week, this month, the next 3 months, or any time
-
-Your answers become a sentence above the results, and every highlighted phrase is editable in one click:
-
-> Showing **action or adventure** **movies** **coming to streaming** **on Netflix or Stan** **in the next 3 months**
-
-## What makes it different
-
-| | |
-|---|---|
-| 🧠 **On-device AI** | Describe a mood ("tense space thriller with a twist") and a sentence-transformer running **in your browser** finds titles that *mean* the same thing. No server, no ML API key, nothing about what you watch leaves your device. |
-| 🍿 **Movie Night** | Everyone in the group names a few films they love; the app finds the one title the whole group will enjoy, shows who's *least* sold, and **explains why** in plain English, with the maths on screen. |
-| 📊 **It measures itself** | An Insights view with real analytics, a PCA + k-means "film map", and an honest model report: neighbour hit-rate against a random baseline, silhouette score, taste-model AUC. |
-| 🎄 **Seasonal modes** | Christmas, Halloween and Easter re-skin the whole app, animate it (snow, bats, petals), **and filter every list server-side** to titles TMDB tags with that season. |
-| 🇦🇺 **Properly Australian** | Australian release dates and classifications, Thursday openings, and Stan, Binge and Free TV as first-class services. |
-| 📱 **Built for phones too** | A dedicated phone layout with a thumb-reach tab bar, full-screen sheets and 44px touch targets. |
-| ⚡ **Fast on repeat visits** | Last results paint instantly; vectors, responses, posters and app files are all cached; a film's details load while you hover it. |
-| 🔒 **Private by design** | No analytics, no tracking, no backend. Your key, watchlist and taste profile live in your browser. |
-
----
-
-## Quick start
-
-You need a free TMDB API key (v3 key or v4 read token): <https://www.themoviedb.org/settings/api>
-
-```bash
-git clone <this repo> && cd ReleaseRadar
-cp .env.example .env      # then put your key after TMDB_API_KEY=
-npm start                 # http://localhost:5173
-```
-
-That's it. The dev server (`scripts/serve.py`) reads `.env` and hands the key to the app, so there's nothing to paste. If port 5173 is busy it uses the next free one and prints the URL.
-
-- **No `.env`?** Open **Settings** in the app and paste a key instead. A key entered there overrides `.env` and is stored only in your browser.
-- **No key at all?** Open <http://localhost:5173/?demo> to explore everything with fictional titles.
-- There is **no build step, bundler or runtime dependency.** It's plain ES modules; any static file server works (only `serve.py` reads `.env`).
-- You need internet for the full look: fonts load from Google Fonts, and the language model downloads once (about 25 MB) the first time you use an AI feature, then is cached.
-
----
+| | View | Answers |
+|---|---|---|
+| 🎬 | **In cinemas** | What's showing now and what's opening, with *Australian* dates and classifications |
+| 📡 | **Coming to streaming** | Which films are about to hit digital/streaming, and which new series and seasons each service is premiering |
+| ▶ | **On streaming now** | What's already on each service, most popular first |
 
 ## Screenshots
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/story-genre.jpg" alt="Genre step with example films on the right"><br><sub><b>Guided start.</b> Pick genres on the left; hover one and the right shows real example films for it.</sub></td>
-    <td width="50%"><img src="docs/screenshots/movie-night.jpg" alt="Movie Night group shortlist with explanations"><br><sub><b>Movie Night.</b> A group shortlist with per-person match bars and a "Why this one?" explanation.</sub></td>
+    <td width="50%"><img src="docs/screenshots/streaming-soon.jpg" alt="Coming to streaming with the Genre dropdown open"><br><sub><b>Coming to streaming.</b> Dropdown filters with live counts, platform badges and Match any/all.</sub></td>
+    <td width="50%"><img src="docs/screenshots/calendar.jpg" alt="Calendar view of cinema releases"><br><sub><b>Calendar view.</b> Month grid, Monday-first, with Thursday openings clearly visible.</sub></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/cinemas.jpg" alt="Poster grid with preview pane"><br><sub><b>Grid + preview pane.</b> Rest on a poster and its backdrop, synopsis and actions appear on the right.</sub></td>
-    <td><img src="docs/screenshots/insights.jpg" alt="Insights: analytics, film map and model report"><br><sub><b>Insights.</b> Analytics, a clustered film map, and a live model-evaluation report.</sub></td>
+    <td><img src="docs/screenshots/release-filter.jpg" alt="Release date menu and classification filter"><br><sub><b>Release date &amp; classification.</b> Presets or a custom range; filter by M, MA15+ and so on.</sub></td>
+    <td><img src="docs/screenshots/streaming-now.jpg" alt="Streaming now filtered to Netflix and Stan comedies"><br><sub><b>Streaming now.</b> Multi-service selection, removable filter chips, grouped by platform.</sub></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/calendar.jpg" alt="Calendar month picker and release agenda"><br><sub><b>Calendar.</b> A month picker shaded by release density beside a day-by-day agenda.</sub></td>
-    <td><img src="docs/screenshots/detail.jpg" alt="Film detail dialog tinted by the poster"><br><sub><b>Detail.</b> Takes on the film's own colour. Tabs for overview, cast &amp; crew, media, reviews, similar.</sub></td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/ai-lab.jpg" alt="The AI Lab tour"><br><sub><b>AI Lab.</b> Every technique in plain language, the file it lives in, and a "Try it" button.</sub></td>
-    <td><img src="docs/screenshots/edit-phrase.jpg" alt="Editing one phrase of the search sentence"><br><sub><b>Edit one phrase</b> of the sentence without starting over.</sub></td>
+    <td><img src="docs/screenshots/detail.jpg" alt="Title detail panel"><br><sub><b>Detail panel.</b> Cast, runtime, release timeline, where to watch, trailer, add to calendar.</sub></td>
+    <td><img src="docs/screenshots/light.jpg" alt="Light theme"><br><sub><b>Light and dark</b> follow your system setting.</sub></td>
   </tr>
 </table>
 
-### Seasonal modes
-
-<table>
-  <tr>
-    <td width="33%"><img src="docs/screenshots/season-christmas.jpg" alt="Christmas mode"><br><sub><b>🎄 Christmas:</b> winter-night blue and Christmas red, twinkling lights, falling snow.</sub></td>
-    <td width="33%"><img src="docs/screenshots/season-halloween.jpg" alt="Halloween mode"><br><sub><b>🎃 Halloween:</b> ink and pumpkin orange, flickering wordmark, bats, embers and fog.</sub></td>
-    <td width="33%"><img src="docs/screenshots/season-easter.jpg" alt="Easter mode"><br><sub><b>🐣 Easter:</b> plum night with pastel pink, mint and butter, drifting petals, a hopping bunny.</sub></td>
-  </tr>
-</table>
-
-<p align="center"><img src="docs/screenshots/mobile.jpg" alt="Phone layout" width="320"><br><sub>The phone layout: two-row header, a scrolling search sentence, a bottom tab bar, full-screen sheets.</sub></p>
-
----
+<p align="center"><img src="docs/screenshots/mobile.jpg" alt="Mobile layout" width="320"><br><sub>Responsive down to phone width. The app is tuned first for a 14″ laptop (1512 × 982).</sub></p>
 
 ## Features
 
-### Know what's coming
-- **Regional cinema dates** from TMDB's per-country release types: the *Australian* date, not the US one.
-- **Digital release dates** for cinema titles heading to home/streaming.
-- **New series and seasons per platform** across nine services, including Free TV (ABC iview, SBS On Demand, 7plus, 9Now, 10 Play).
-- **Honest status on every title:** *In cinemas now*, *Confirmed*, *Rumoured* or *Delayed* ([how delays are detected](#how-delays-are-detected)).
-- **Countdowns** ("in 12 days") and Australian date formats.
+**Know what's coming**
+- **Regional cinema dates.** Uses TMDB's per-country release types, so you see the *Australian* wide/limited release date, not the US one.
+- **Digital release dates.** Cinema titles heading to home/streaming, with the date TMDB lists for Australia.
+- **New series and seasons per platform.** Netflix, Prime Video, Disney+, Stan, Binge, HBO Max, Apple TV+, Paramount+ and Free TV (ABC iview, SBS On Demand, 7plus, 9Now, 10 Play).
+- **Honest status on every title:** *In cinemas now*, *Confirmed*, *Rumoured*, or *Delayed* (see [How delays are detected](#how-delays-are-detected)).
+- **Countdowns** ("in 12 days") and Australian date format (18 Dec 2026).
 
-### Find the right thing the way you'd think about it
-- **A guided story, not a filter wall.** Single-choice answers advance automatically, you can skip any time, and returning visitors go straight to results.
-- **Your search as a sentence.** Click a phrase to change just that part; **Start over** redoes the questions. Clicking the logo goes back to the start.
-- **Genre picker with examples.** Hover or focus a genre to see its description, how many titles match right now, and four well-rated example posters from your current results.
-- **Live counts** on genre and service tiles; tiles with no matches disappear.
-- **Refine** (collapsed by default): date range, runtime, classification, language, status, rating, sort and export. Extra filters show as removable chips.
-- **Search on every keystroke**, then a short pause later it searches *all* of TMDB. Type three or more words and press Enter for **semantic search**.
-- **Clear group boundaries.** Each group (a month, a service) gets its own banner with a title count and a rule above it.
-- **Helpful empty and error states** that point at the phrase that's narrowing things, or say what failed and offer *Try again*.
+**Find the right thing fast**
+- **Dropdown filter bar** with Genre (multi-select with live counts, search, match any/all), Release date (presets or custom range), Runtime (range slider), Service (multi-select), Format, Classification, Language, Status, Rating and Sort. Menus only show what's relevant to the current view.
+- **Active-filter chips** you can remove one at a time, plus *Clear all*.
+- **Instant search**: results update on every keystroke, and a short pause later it also searches *all* of TMDB, so you can find a title that isn't in the lists.
+- **Jump bar** that tracks your scroll position (Nov '26, Dec '26, and so on), **infinite scroll**, and a back-to-top button.
+- **Grid or Calendar** layouts, with a hover synopsis on every poster.
 
-### Browse comfortably
-- **Grid with a preview pane.** Rest on a poster (a short hover delay stops flicker) or focus it with the keyboard; the right-hand pane shows backdrop, rating, genres, synopsis, **Full details** and **Save**.
-- **Calendar as month picker + agenda.** Days are shaded by how many releases they have; the agenda lists only days that have releases, with full titles.
-- **A rich detail dialog.** Backdrop hero, trailer on click (privacy-friendly `youtube-nocookie`, never autoplays), a stat strip with a score ring, where to watch (with provider logos), release dates, and tabs for **Cast & crew** (photos), **Media**, **Reviews** and **Similar**. Step through titles with `←` `→`. The dialog takes on the dominant colour of the poster.
-- **Seamless refresh.** Refresh keeps what's on screen, fetches fresh data behind it, updates titles in place and removes ones that no longer apply. No blank page, no spinner takeover.
-
-### Make it yours
-- **A greeting that knows you.** A time-of-day hello, how many titles arrive this week, and a featured pick chosen from your genres and saves ("Because you like Sci-Fi").
-- **Watchlist** with **Undo** on every save/remove, plus a one-click *Watchlist only* filter.
-- **Add to calendar** for one title, a filtered list or your watchlist (`.ics` for Apple Calendar, Google Calendar and Outlook), and **CSV export**.
+**Make it yours**
+- **Watchlist** (★ on any poster) and a one-click *Watchlist only* filter.
+- **Add to calendar** for one title, a whole filtered list, or your watchlist, via standard `.ics` files that work with Apple Calendar, Google Calendar and Outlook.
+- **Export** the current list as CSV.
 - **Region switcher** (Australia by default; NZ, US, UK and more).
 
-### Easy to use, everywhere
-- **Keyboard:** `/` search · `1` `2` `3` Grid / Calendar / Insights · `M` Movie Night · `←` `→` in a film · `Esc` close · `?` help.
-- **Back button closes dialogs** instead of leaving the app.
-- **Accessibility:** skip-to-results link, clear focus outlines, ARIA live regions for status, `prefers-reduced-motion` respected (animations become still frames), 40px+ tap targets (44px on touch).
-- **Phones:** a dedicated layout, not just a shrunken desktop. See [Phone layout](#phone-layout).
+**Fast and respectful of the API**
+- Stale-while-revalidate: your last results paint instantly, then refresh in the background.
+- Titles stream onto the page as they resolve, soonest first.
+- Cached responses are trimmed before they're stored, requests are pooled and retried on rate limits, and expensive lists load lazily per service.
 
----
+## Quick start
 
-## AI, machine learning & data science
+You need a free TMDB API key (a v3 key or v4 read token): <https://www.themoviedb.org/settings/api>
 
-> **Click “✦ AI Lab” in the app header for an interactive tour of everything below.** It all runs in the browser.
+```bash
+git clone <this repo> && cd ReleaseRadar
+npm start            # serves the folder on http://localhost:5173 (any static server works)
+```
 
-| Discipline | What it does | Techniques | Where |
-|---|---|---|---|
-| **NLP / semantic search** | Describe a mood, get titles that mean the same thing | Sentence embeddings (MiniLM-L6-v2 via Transformers.js/WASM), cosine similarity | [`js/semantic.js`](js/semantic.js), [`js/vec.js`](js/vec.js) |
-| **Recommender system** | "Find similar titles" with a calibrated match % | k-NN in embedding space, absolute score calibration, relevance floor | [`js/vec.js`](js/vec.js), [`js/app.js`](js/app.js) |
-| **Group recommendation** | Movie Night: one pick for several people | Per-person taste centroids, average + least-misery social choice, fairness score, explanations | [`js/group.js`](js/group.js), [`js/night.js`](js/night.js) |
-| **Supervised learning** | Learns your taste from saved titles | L2-regularised logistic regression, class balancing, leave-one-positive-out AUC | [`js/ml.js`](js/ml.js) |
-| **Unsupervised learning** | The film map | PCA (power iteration), k-means++, *k* by silhouette, c-TF-IDF cluster labels | [`js/ml.js`](js/ml.js), [`js/insights.js`](js/insights.js) |
-| **Model evaluation** | The app measures itself | Neighbour genre hit-rate@5 vs random baseline, silhouette, AUC | [`js/insights.js`](js/insights.js) |
-| **Data analysis** | Release density, genre mix, distributions | Median/IQR/percentiles, histograms, co-occurrence matrix, hand-built SVG | [`js/insights.js`](js/insights.js) |
-| **Data engineering** | Live TMDB ingestion | Pooled retrying client, response trimming, multi-layer caching, delay/rumour inference | [`js/radar.js`](js/radar.js), [`js/tmdb.js`](js/tmdb.js) |
-| **Reliability** | Works without the neural model | Hashed TF-IDF fallback (feature hashing); the UI says which engine ran | [`js/semantic.js`](js/semantic.js) |
+Open <http://localhost:5173>, click **Settings**, paste your key, and pick your region. The key is stored only in your browser's `localStorage` and is sent only to `api.themoviedb.org`.
 
-All the maths is implemented from scratch, seeded and deterministic, and unit-tested. Methodology, evaluation and honest limitations are in **[docs/ML.md](docs/ML.md)**.
+**No key yet?** Open <http://localhost:5173/?demo> to explore the whole interface with fictional titles.
 
-### Honest match percentages
+There is no build step, no bundler and no runtime dependency; it is plain ES modules.
 
-A common recommender bug is rescaling scores *within each result set*, so the best result always looks like a strong match, even when nothing is similar. Here, scores are calibrated on an **absolute scale per engine**, and anything below a relevance floor is dropped entirely rather than shown as a weak "41% match".
+## Using it
 
-### Movie Night: group recommendation with explanations
+| Do this | To get this |
+|---|---|
+| Click a tab | Switch between **In cinemas**, **Coming to streaming** and **On streaming now** |
+| Open **Genre**, tick several | Titles matching any of them (or all, with *Match all*). Counts update as you filter |
+| Open **Release date** | Preset ranges (this week, next 3 months…) or a custom from/to |
+| Open **Classification** | Narrow to e.g. M and MA15+ (cinema and streaming-soon views) |
+| Open **Service** | Pick one or more platforms (streaming views) |
+| Open **Sort** | Recommended, most popular, release date, highest rated, A–Z; group streaming-soon by date or platform |
+| Press `/` | Focus search |
+| Click a poster | Open the detail panel; use `←` `→` to step through the list |
+| **Calendar** toggle | Month grid of the current list |
+| **Export** | CSV of the list, or `.ics` for the list or your watchlist |
+| `Esc` | Close a menu or panel |
 
-Each person's taste is the centroid of the embeddings of the films they love. A candidate's **group score** is half the group's *average* match and half the *lowest* match (the "least misery" rule), so a film one person adores and another hates is pushed down. Each result shows a per-person bar, a plain-English verdict ("Sam is the least sold"), and a **Why this one?** panel: which of each person's picks it resembles most, the genres and rarest words they share, and the arithmetic behind the score.
+### Australia specifics
 
-### Seasonal modes: server-side filtering
-
-Picking Christmas, Halloween or Easter doesn't just hide posters. Keyword names ("christmas", "santa claus", "halloween", "haunted house", "easter bunny"…) are looked up through TMDB's keyword search at run time (ids are never hard-coded) and passed to every `discover` query as `with_keywords`, so cinemas, coming-to-streaming and streaming-now all narrow at the source. Caches and snapshots are kept separately per season. Easter's date is computed (anonymous Gregorian algorithm), so its "coming up" prompt moves each year. Animations (snow, bats, petals) run on one click-through canvas **behind** the page content, pause in background tabs, and can be switched off in the `⋯` menu.
-
----
+- **Region defaults to Australia (`AU`)**, and requests use `language=en-AU`.
+- Cinema openings in Australia are on **Thursdays**; the calendar makes that obvious.
+- Classifications shown are the Australian ones (G, PG, M, MA15+, R18+) as reported by TMDB.
+- **Stan**, **Binge** and **Free TV** are first-class services, alongside the global ones.
+- Prefer another country? Change the region in Settings; dates, classifications and platform availability all follow it. (Stan and Binge only exist in Australia, and the app tells you when a service isn't listed for your region.)
 
 ## How it works
 
 ```mermaid
 flowchart LR
-  UI["app.js<br/>state · story · grid · preview · seasons"] --> R["radar.js<br/>loadCinema · loadSoon · loadAvailable<br/>loadDetail · searchTitles · seasonKeywordIds"]
-  R --> T["tmdb.js<br/>auth · pool of 12 · retry on 429<br/>pagination · cache with LRU eviction"]
+  UI["app.js<br/>tabs · filters · grid · calendar"] --> R["radar.js<br/>loadCinema · loadSoon · loadAvailable<br/>loadDetail · searchTitles"]
+  R --> T["tmdb.js<br/>auth · pool of 12 · retry on 429<br/>pagination · localStorage cache"]
   T --> API[("TMDB v3 API")]
   R --> M["model.js (pure)<br/>filters · grouping · status · dates"]
   UI --> M
-  UI --> S["story.js · filters.js · detail.js · calendar.js"]
-  UI --> N["night.js → group.js (pure)<br/>Movie Night"]
-  UI --> I["insights.js · lab.js"]
-  I --> ML["ml.js · vec.js (pure, seeded)<br/>PCA · k-means · logistic regression"]
-  N --> ML
-  ML --> E["semantic.js<br/>MiniLM (WASM) or TF-IDF fallback"]
-  E --> IDB[("IndexedDB<br/>vector cache")]
-  UI --> FX["fx.js · seasons.js<br/>seasonal canvas + data"]
+  UI --> F["filters.js<br/>dropdown bar"]
+  UI --> D["detail.js<br/>panel on demand"]
+  UI --> C["calendar.js"]
   UI --> X["export.js (pure)<br/>.ics · .csv"]
-  SW["sw.js<br/>posters · fonts · app files"] -.-> UI
-  SRV["serve.py<br/>reads .env"] -. "/config.json" .-> UI
 ```
 
 ### What comes from where
 
 | View | TMDB data | Notes |
 |---|---|---|
-| **In cinemas** | `discover/movie` with `region`, `with_release_type=2\|3`, from 5 weeks ago to 18 months out, most popular first; then each title's `release_dates` | Regional cinema date, plus classification and runtime |
-| **Coming to streaming** (movies) | `discover/movie` with `with_release_type=4` (digital) over ~4 months; `release_dates`; `watch/providers` | Platform shown only when TMDB knows it |
-| **Coming to streaming** (TV) | `discover/tv` per service via `with_networks`, for new series and new seasons | Service known from the network |
-| **Streaming now** | `discover/movie` + `discover/tv` with `with_watch_providers`, `watch_region`, flatrate/free/ads | Top ~120 per service |
-| **Detail** | `movie/{id}` / `tv/{id}` with `credits`, `videos`, `images`, `keywords`, `reviews`, `recommendations`, `external_ids`, `release_dates`, `watch/providers` | Fetched on demand (and prefetched on hover), cached |
+| **In cinemas** | `discover/movie` with `region`, `with_release_type=2\|3` (limited/wide cinema), from 5 weeks ago to 18 months out, most popular first; then each title's `release_dates` | The date shown is the regional cinema date, plus classification and runtime |
+| **Coming to streaming** (movies) | `discover/movie` with `with_release_type=4` (digital) over the next ~4 months; `release_dates` for the date; `watch/providers` for platforms | Platform is shown only when TMDB knows it |
+| **Coming to streaming** (TV) | `discover/tv` per service via `with_networks`, for new series (`first_air_date`) and new seasons (next episode is S?E1) | Service is known from the network |
+| **On streaming now** | `discover/movie` + `discover/tv` with `with_watch_providers`, `watch_region` and flatrate/free/ads | Top ~120 per service, most popular first |
+| **Detail panel** | `movie/{id}` / `tv/{id}` with `credits`, `videos`, `release_dates`, `watch/providers` | Fetched on demand and cached |
 | **Search** | `search/multi` | Local results are instant; this adds titles beyond the loaded lists |
-| **Seasons** | `search/keyword`, then `with_keywords` on every `discover` above | Keyword ids resolved at run time |
 
-Genres are normalised between TMDB's movie and TV lists (e.g. "Sci-Fi & Fantasy" becomes *Sci-Fi* and *Fantasy*) so one filter works across both.
+Genres are normalised between TMDB's movie and TV lists (for example "Sci-Fi & Fantasy" becomes *Sci-Fi* and *Fantasy*) so one filter works across both.
+Network IDs for the streaming services come from TMDB's public `tv_network_ids` export.
 
-### What TMDB does not know
+### What TMDB does not know (and how the app handles it)
 
-TMDB has **no "added to Netflix on date X" feed**, so *Coming to streaming* is built from what can be known: a film's **digital release date**, and a **series' or season's premiere** on a service's network. Platforms for unreleased films are shown only when TMDB lists them. (A learned estimate of each film's streaming window is on the [roadmap](#roadmap).)
+TMDB has **no "added to Netflix on date X" feed**, so the *Coming to streaming* view is built from what *can* be known:
+
+- a film's **digital release date** (when it becomes available to watch at home, often as a rental first),
+- a **series' or season's premiere** on a specific service's network.
+
+Platforms for unreleased films are shown only when TMDB lists them; otherwise the card says so rather than guessing.
 
 ### How delays are detected
 
-TMDB exposes no "delayed" flag either, so it's inferred. The first date the app sees for a title (per region and view) is remembered in your browser. If a later fetch reports a *later* date, the title is marked **Delayed** and the original date is struck through. This needs at least two visits to see a change.
+TMDB exposes no "delayed" flag either, so it's inferred. The first date the app sees for a title (per region and view) is remembered in your browser. If a later fetch reports a *later* date, the title is marked **Delayed** and the original date is shown struck through. If a date moves earlier, the flag clears. It's per-browser and starts from your first visit. Other statuses: **Rumoured** means TMDB says *Rumored/Planned* or only has a year-level placeholder (Jan 1); **In cinemas now** means the regional cinema date has passed.
 
-### Caching: why repeat visits are fast
+### Caching and performance
 
-| Layer | What is kept | Where | Lifetime |
-|---|---|---|---|
-| Last results | The titles you were looking at, painted instantly on load, then refreshed | `localStorage` snapshot | Refreshed if older than 20 min |
-| TMDB responses | Trimmed list and detail responses | `localStorage`, oldest evicted first when full | Lists 6 h, details 24 h |
-| Language-model vectors | One embedding per synopsis, keyed by a hash of its text | IndexedDB ([`js/idb.js`](js/idb.js)) | Capped at 6,000, oldest dropped |
-| Posters, fonts, libraries, app files | Static assets | Service worker ([`sw.js`](sw.js)) | Images cache-first; the rest stale-while-revalidate (network-first on localhost so dev edits show immediately) |
-| Film details | Fetched while you hover a title, so the dialog opens ready | Same TMDB cache | 24 h |
-
-Also: 12 pooled concurrent requests with back-off on HTTP 429, response trimming, cards built once and reused, infinite scroll, `content-visibility` for offscreen cards, and live results re-rendering at most every 350 ms. Per-season data is cached and snapshotted separately.
-
-### Phone layout
-
-Below 720px the app switches to a purpose-built layout ([`css/mobile.css`](css/mobile.css)): a two-row header (logo and actions, then a full-width search), the "Showing…" sentence and its actions as single sideways-scrolling rows, a **bottom tab bar** (Browse · Calendar · Insights · Movie Night · AI Lab), the Refine filters as a bottom sheet, dialogs as full-screen sheets, two-column posters, 16px inputs (no iOS zoom), safe-area padding for notches and home bars, and no hover-only behaviour on touch devices.
-
-### Design
-
-An original "movie night" theme (oxblood red, antique gold, near-black, one Art Deco display face for titles) that is deliberately calm: flat colour, thin borders, generous spacing. Seasonal modes re-skin it by redefining colour and font tokens only. Not affiliated with any streaming service. Fonts: Limelight, Inter and Space Mono (plus Creepster, Mountains of Christmas and Fredoka for the seasons), from Google Fonts.
-
----
+| Layer | Behaviour |
+|---|---|
+| Response cache | `localStorage`, TTL: genres/providers 7 days, lists 6 hours, details 24 hours. Responses are trimmed to only the fields used |
+| View snapshots | Each view's results are saved per region; a snapshot younger than 20 minutes skips the network entirely, an older one paints instantly then refreshes |
+| Request pool | 12 concurrent requests, retry with back-off on HTTP 429 |
+| Rendering | Cards are built once and reused, long lists render in pages (infinite scroll), offscreen cards skip layout (`content-visibility`), and live-streamed results re-render at most every 350 ms |
 
 ## Project structure
 
 ```
-index.html                page shell
-sw.js                     service worker: posters, fonts, app files (offline-capable)
-css/
-  styles.css              base layout, components, tokens
-  retro.css               the "movie night" theme (token-driven)
-  seasons.css             Christmas / Halloween / Easter token sets + banners
-  mobile.css              phone layout and tab bar
+index.html            page shell
+css/styles.css        design tokens, light/dark, responsive (14" first)
 js/
-  app.js                  state, loading, rendering, preview pane, seasons, wiring
-  radar.js  tmdb.js       TMDB pipeline: loaders, client (pool, retry, cache, eviction)
-  model.js                PURE: filters, status, grouping, dates
-  story.js  filters.js    guided questions (with genre example panel) · Refine
-  detail.js  calendar.js  detail dialog · month picker + agenda
-  semantic.js             on-device embeddings (MiniLM / TF-IDF fallback) + persistent cache
-  vec.js  ml.js           PURE: vectors, cosine, calibration · PCA, k-means, logistic regression
-  group.js  night.js      PURE group-recommendation maths · Movie Night UI
-  insights.js  lab.js     Insights view (charts, film map, model report) · AI Lab tour
-  seasons.js  fx.js       PURE season data and dates · seasonal animation canvas
-  idb.js  export.js       IndexedDB vector store · PURE .ics / .csv builders
-  demo.js  ui.js          fictional data for ?demo · DOM/storage helpers
-scripts/
-  serve.py                no-cache dev server; serves the .env key at /config.json
-  screenshots.sh          regenerates docs/screenshots from demo mode
-test/                     model · vec · ml · group · seasons  (45 tests)
-docs/ML.md                methodology, evaluation, limitations
-.env.example              template for TMDB_API_KEY
+  app.js              state, loading, rendering, wiring
+  filters.js          the dropdown filter bar + active-filter chips
+  detail.js           title detail panel
+  calendar.js         month-grid view
+  radar.js            TMDB data pipeline (cinema, soon, now, detail, search)
+  tmdb.js             API client: auth, pool, retry, pagination, cache
+  model.js            PURE logic: filters, status, grouping, dates, release types
+  export.js           PURE: .ics and CSV builders
+  demo.js             fictional data for ?demo
+  ui.js               DOM/storage helpers
+test/model.test.js    unit tests for the pure logic
+scripts/screenshots.sh  regenerates docs/screenshots from demo mode
 ```
-
----
 
 ## Development
 
 ```bash
-npm start            # dev server (reads .env)
 npm test             # unit tests (Node's built-in runner, no dependencies)
 npm run screenshots  # regenerate docs/screenshots (needs Google Chrome)
 ```
 
-**Tests (45)** cover the logic most likely to be subtly wrong: the story sentence, per-view filter scoping, release-type parsing, status and delay inference, date presets, the calendar grid, filtering/sorting/grouping, the `.ics`/CSV builders, the ML maths (k-means, PCA, silhouette, logistic regression, AUC), embedding calibration and cache keys, group ranking (including least-misery and explanations), and Easter's date plus season windows.
+The tests cover the logic most likely to be subtly wrong: release-type parsing, status and delay inference, date presets, the calendar grid, genre/service/runtime/rating filtering, sorting and grouping, and the `.ics`/CSV exporters.
 
-### Demo mode
-
-Add `?demo` for fictional titles with no key. The screenshot script drives it with URL parameters, for example:
-`/?demo&mode=soon&genres=Action,Sci-Fi&services=stan&when=3m&view=calendar`
-
-| Parameter | Effect |
-|---|---|
-| `mode=cinema\|soon\|now` | Pick the view |
-| `view=grid\|calendar\|insights` | Pick the layout |
-| `guide=1` · `step=genre` · `edit=genre` | Show the questions, jump to a step, open the phrase editor |
-| `season=christmas\|halloween\|easter` | Start in a seasonal mode |
-| `night=1` · `night=run` · `lab=1` · `more=1` · `detail=2` · `refine=1` | Open Movie Night (optionally with an example group), the AI Lab, the `⋯` menu, a film, or Refine |
-| `cal=2026-12` | Calendar month |
-| `slow` | Hold the loading state |
-| `noml` · `nosw` · `nofx` | Disable the neural model, the service worker, the seasonal animations |
-
-### Status
-
-| Area | State |
-|---|---|
-| Interface (story, views, Refine, calendar, preview pane, detail, Movie Night, seasons, phone layout) | Built and checked in a real browser through demo mode and screenshots |
-| Pure logic and ML maths | Unit-tested |
-| Core TMDB flows (cinemas, streaming now, detail) | Running against live TMDB data |
-| Newer pieces: seasonal keyword filtering, the service worker, the IndexedDB vector cache, the neural model path, Movie Night on real titles, and the bat/bunny/sleigh animations | Exercised in demo mode and tests; not yet soak-tested against live data. Please open an issue with the console output if something looks off. |
-
----
+**Demo mode** accepts URL parameters (used by the screenshot script), for example:
+`/?demo&mode=soon&genres=Action,Sci-Fi&services=stan&view=calendar&open=genre&detail=2`
 
 ## Deploying
 
-It's a static site: GitHub Pages, Netlify, Cloudflare Pages or any file host works; publish the repo root. Static hosts don't run `serve.py`, so there's no `.env` there: each visitor pastes their *own* free TMDB key into Settings, and it never leaves their browser. (A shared key would be visible to anyone, so don't ship one.) The service worker serves cached app files first and updates in the background, so a new deploy appears on the *second* load.
+It's a static site, so GitHub Pages, Netlify, Cloudflare Pages or any file host works; publish the repo root. **No secrets are involved:** each visitor pastes their *own* free TMDB key into Settings, and it never leaves their browser except to call TMDB. (That also keeps you within TMDB's per-key rate limits.)
 
 ## Privacy
 
-No analytics, no tracking, no backend. Your key, region, filters, watchlist, season, and cached data live in your browser (`localStorage` and IndexedDB); clearing site data resets everything. Embeddings and your taste profile never leave the device. Trailers use `youtube-nocookie`, and only load when you press play. `.env` is git-ignored.
+No analytics, no tracking, no backend. Your API key, region, filters, watchlist and cached data live in your browser's `localStorage`. Clearing site data resets everything.
 
 ## Known limits
 
 - Data is only as good as TMDB's crowd-sourced data, so dates can be wrong or move; that's why each title shows a status.
 - Lists cover the **most popular** titles (a few hundred per view), not all of TMDB; search reaches beyond them.
-- Seasonal filtering relies on TMDB's keyword tagging, so Easter in particular can return few titles.
-- The keyword fallback is much weaker than the neural model; the UI tells you which one ran.
-- No push notifications; use *Add to calendar*.
+- No notifications or reminders; use *Add to calendar* instead.
 - "Delayed" detection needs at least two visits to see a change.
 
-## Roadmap
+## Roadmap ideas
 
-- **Streaming-window predictor:** estimate when a film in cinemas will reach streaming, trained on past theatrical → digital gaps (genre, studio, popularity), reported with held-out error against a naive baseline.
-- A small backend and scheduled data snapshot, so history (and delay detection) doesn't depend on one browser.
-- Reminders via a service worker; shareable links for a filtered view.
-- Cinema session times (needs another data source).
-- RAG-style Q&A over reviews and synopses, with retrieval evaluation.
+Reminders via a service worker, a shareable link for a filtered view, cinema session times (needs a different data source), and a "leaving soon" view if a reliable source appears.
 
 ## Credits & licence
 
-- Film and TV metadata, images and streaming availability by **[TMDB](https://www.themoviedb.org/)**. *This product uses the TMDB API but is not endorsed or certified by TMDB.* Streaming availability on TMDB is provided by JustWatch.
-- Language model: [all-MiniLM-L6-v2](https://huggingface.co/Xenova/all-MiniLM-L6-v2) via [Transformers.js](https://github.com/huggingface/transformers.js).
+- Film and TV metadata, images and streaming availability by **[TMDB](https://www.themoviedb.org/)**. *This product uses the TMDB API but is not endorsed or certified by TMDB.* Streaming-availability data on TMDB is provided by JustWatch.
 - Code is released under the **Apache-2.0** licence (see [LICENSE](LICENSE)).
 - TMDB's API terms apply to your use of their data. The free API is for **non-commercial** use.

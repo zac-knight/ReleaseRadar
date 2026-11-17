@@ -5,7 +5,7 @@
   "type": "module",
   "description": "What's in Australian cinemas and what's heading to streaming (Netflix, Prime Video, Disney+, Stan, Binge, HBO Max and more), powered by TMDB.",
   "scripts": {
-    "start": "python3 scripts/serve.py 5173",
+    "start": "python3 -m http.server 5173",
     "demo": "echo 'Open http://localhost:5173/?demo after `npm start`'",
     "test": "node --test test/*.test.js",
     "screenshots": "./scripts/screenshots.sh"
