@@ -3,7 +3,7 @@
 
 const BASE = 'https://api.themoviedb.org/3';
 export const IMG = 'https://image.tmdb.org/t/p/w342';
-const CACHE_PREFIX = 'rr:cache2:';
+const CACHE_PREFIX = 'rr:cache3:';
 const MAX_CONCURRENT = 12;
 
 export const TTL = { search: 7 * 864e5, list: 6 * 36e5, detail: 24 * 36e5 };
@@ -25,10 +25,23 @@ function cacheGet(key) {
 function cacheSet(key, v, ttl) {
   const payload = JSON.stringify({ t: Date.now(), ttl, v });
   try { localStorage.setItem(CACHE_PREFIX + key, payload); }
-  catch { // quota: drop our cache and try once more
-    clearCache();
-    try { localStorage.setItem(CACHE_PREFIX + key, payload); } catch { /* give up quietly */ }
+  catch { // quota: evict the oldest third (not everything), then try once more
+    evictOldest(1 / 3);
+    try { localStorage.setItem(CACHE_PREFIX + key, payload); } catch { evictOldest(1 / 2); try { localStorage.setItem(CACHE_PREFIX + key, payload); } catch { /* give up quietly */ } }
   }
+}
+
+/** Remove the oldest `fraction` of cached responses (least-recently-fetched first). */
+function evictOldest(fraction) {
+  try {
+    const rows = [];
+    for (const k of Object.keys(localStorage)) {
+      if (!k.startsWith(CACHE_PREFIX)) continue;
+      let t = 0; try { t = JSON.parse(localStorage.getItem(k)).t; } catch { /* corrupt: evict first */ }
+      rows.push([k, t]);
+    }
+    rows.sort((a, b) => a[1] - b[1]).slice(0, Math.max(1, Math.ceil(rows.length * fraction))).forEach(([k]) => localStorage.removeItem(k));
+  } catch { /* ignore */ }
 }
 
 export function clearCache() {
@@ -80,7 +93,7 @@ const inflight = new Map();
 const pick = (o, keys) => Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, o[k]]));
 const slimList = (v) => (v && Array.isArray(v.results) && v.results[0]?.poster_path !== undefined
   ? { page: v.page, total_pages: v.total_pages,
-    results: v.results.map((r) => pick(r, ['id', 'title', 'name', 'release_date', 'first_air_date', 'poster_path', 'overview', 'popularity', 'genre_ids', 'original_language', 'vote_average', 'media_type'])) }
+    results: v.results.map((r) => pick(r, ['id', 'title', 'name', 'release_date', 'first_air_date', 'poster_path', 'backdrop_path', 'overview', 'popularity', 'genre_ids', 'original_language', 'vote_average', 'media_type'])) }
   : v);
 
 /** `slim` trims a response before it is cached/returned, to keep localStorage small. */
