@@ -174,6 +174,51 @@ export function applyFilters(entries, f, watchlist, now = new Date()) {
     (catalogue || inTimeframe(e.date, f.when, now, custom)));
 }
 
+/**
+ * The filters that actually apply in a given view. Some controls only exist in some views (e.g. runtime and
+ * "in cinemas now" are cinema/streaming-soon concepts), so a value set in one tab must not silently hide
+ * everything in another.
+ */
+export function effectiveFilters(f) {
+  const over = {};
+  if (f.mode === 'cinema') Object.assign(over, { format: 'all', services: [], minRating: 0 });
+  else if (f.mode === 'soon') {
+    over.minRating = 0;
+    if (f.status === 'now_playing') over.status = 'all'; // titles heading to streaming aren't "in cinemas now"
+  } else {
+    Object.assign(over, { status: 'all', when: 'all', from: '', to: '', certs: [], rtMin: 0, rtMax: RUNTIME_MAX });
+  }
+  return { ...f, ...over };
+}
+
+// ---- the story sentence -------------------------------------------------------------------
+const listJoin = (items, word = 'or') => (items.length <= 1 ? items.join('')
+  : items.length === 2 ? `${items[0]} ${word} ${items[1]}`
+    : `${items.slice(0, -1).join(', ')} ${word} ${items.at(-1)}`);
+const WHEN_TEXT = { all: 'at any time', week: 'this week', month: 'this month', nextmonth: 'next month',
+  '3m': 'in the next 3 months', year: 'this year', later: 'after this year' };
+
+/**
+ * The filters as a readable sentence, as segments. Segments with a `step` are editable
+ * ("genre", "media", "what", "where", "when"); the rest are plain words.
+ *   Showing [action or adventure] [movies] [in Australian cinemas] [this month]
+ */
+export function storySentence(f, { regionAdj = 'Australian', serviceLabel = (id) => id } = {}) {
+  const parts = [{ text: 'Showing' }];
+  parts.push({ step: 'genre', text: f.genres?.length
+    ? listJoin(f.genres.map((g) => g.toLowerCase()), f.genreMode === 'all' ? 'and' : 'or') : 'all genres' });
+  if (f.mode === 'cinema') parts.push({ text: 'films' });
+  else parts.push({ step: 'media', text: f.format === 'movie' ? 'movies' : f.format === 'tv' ? 'TV shows' : 'movies and TV shows' });
+  parts.push({ step: 'what', text: f.mode === 'cinema' ? `in ${regionAdj} cinemas` : f.mode === 'soon' ? 'coming to streaming' : 'streaming now' });
+  if (f.mode !== 'cinema') {
+    parts.push({ step: 'where', text: f.services?.length ? `on ${listJoin(f.services.map(serviceLabel))}` : 'on any service' });
+  }
+  if (f.mode !== 'now') {
+    parts.push({ step: 'when', text: f.when === 'custom' ? `from ${f.from || '…'} to ${f.to || '…'}` : (WHEN_TEXT[f.when] ?? 'at any time') });
+  }
+  return parts;
+}
+
 /** Order entries by 'date' (soonest first), 'newest', 'popular', 'rating' or 'title'. */
 export function orderBy(entries, sort = 'date') {
   const byTitle = (a, b) => a.title.localeCompare(b.title);
